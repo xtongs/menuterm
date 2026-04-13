@@ -14,6 +14,7 @@ final class NotchWindowController: NSWindowController {
     private var panelFocusObserver: NSObjectProtocol?
     private var applicationFocusObserver: NSObjectProtocol?
     private var sleepWakeObserver: NSObjectProtocol?
+    private var isToggleInProgress = false
 
     init() {
         super.init(window: panel)
@@ -152,7 +153,8 @@ final class NotchWindowController: NSWindowController {
             object: panel,
             queue: .main
         ) { [weak self] _ in
-            self?.collapse()
+            guard let self, !self.isToggleInProgress else { return }
+            self.collapse()
         }
 
         applicationFocusObserver = NotificationCenter.default.addObserver(
@@ -160,7 +162,8 @@ final class NotchWindowController: NSWindowController {
             object: NSApp,
             queue: .main
         ) { [weak self] _ in
-            self?.collapse()
+            guard let self, !self.isToggleInProgress else { return }
+            self.collapse()
         }
     }
 
@@ -222,6 +225,9 @@ final class NotchWindowController: NSWindowController {
     // MARK: - Toggle
 
     func toggle() {
+        isToggleInProgress = true
+        defer { isToggleInProgress = false }
+
         isExpanded ? collapse() : expand()
     }
 
