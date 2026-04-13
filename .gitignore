@@ -1,0 +1,30 @@
+# Xcode
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+.build/
+
+# Build
+build/
+*.app
+*.dylib
+*.o
+*.swiftmodule
+*.swiftdoc
+
+# Swift Package Manager
+.swiftpm/
+.checkout/
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# .derivedData (local package checkout)
+.derivedData/
