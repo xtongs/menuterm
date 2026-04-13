@@ -11,8 +11,6 @@ final class NotchWindowController: NSWindowController {
     private var localMouseMonitor: Any?
     private var screenObserver: NSObjectProtocol?
     private var settingsObserver: NSObjectProtocol?
-    private var panelFocusObserver: NSObjectProtocol?
-    private var applicationFocusObserver: NSObjectProtocol?
     private var sleepWakeObserver: NSObjectProtocol?
     private var isAnimating = false
 
@@ -23,7 +21,6 @@ final class NotchWindowController: NSWindowController {
         setupMouseMonitors()
         setupScreenObserver()
         setupSettingsObserver()
-        setupFocusObservers()
         setupSleepWakeObserver()
     }
 
@@ -41,12 +38,6 @@ final class NotchWindowController: NSWindowController {
             NotificationCenter.default.removeObserver(observer)
         }
         if let observer = settingsObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
-        if let observer = panelFocusObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
-        if let observer = applicationFocusObserver {
             NotificationCenter.default.removeObserver(observer)
         }
         if let observer = sleepWakeObserver {
@@ -144,26 +135,6 @@ final class NotchWindowController: NSWindowController {
             queue: .main
         ) { [weak self] _ in
             self?.handleSettingsChange()
-        }
-    }
-
-    private func setupFocusObservers() {
-        panelFocusObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.didResignKeyNotification,
-            object: panel,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self, !self.isAnimating else { return }
-            self.collapse()
-        }
-
-        applicationFocusObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didResignActiveNotification,
-            object: NSApp,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self, !self.isAnimating else { return }
-            self.collapse()
         }
     }
 
