@@ -14,7 +14,7 @@ final class NotchWindowController: NSWindowController {
     private var panelFocusObserver: NSObjectProtocol?
     private var applicationFocusObserver: NSObjectProtocol?
     private var sleepWakeObserver: NSObjectProtocol?
-    private var isToggleInProgress = false
+    private var isAnimating = false
 
     init() {
         super.init(window: panel)
@@ -153,7 +153,7 @@ final class NotchWindowController: NSWindowController {
             object: panel,
             queue: .main
         ) { [weak self] _ in
-            guard let self, !self.isToggleInProgress else { return }
+            guard let self, !self.isAnimating else { return }
             self.collapse()
         }
 
@@ -162,7 +162,7 @@ final class NotchWindowController: NSWindowController {
             object: NSApp,
             queue: .main
         ) { [weak self] _ in
-            guard let self, !self.isToggleInProgress else { return }
+            guard let self, !self.isAnimating else { return }
             self.collapse()
         }
     }
@@ -225,14 +225,12 @@ final class NotchWindowController: NSWindowController {
     // MARK: - Toggle
 
     func toggle() {
-        isToggleInProgress = true
-        defer { isToggleInProgress = false }
-
         isExpanded ? collapse() : expand()
     }
 
     private func expand() {
-        guard !isExpanded else { return }
+        guard !isExpanded, !isAnimating else { return }
+        isAnimating = true
         isExpanded = true
         refreshGeometry()
 
@@ -256,13 +254,15 @@ final class NotchWindowController: NSWindowController {
             ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1) // easeOutExpo
             self.panel.animator().setFrame(targetFrame, display: true)
         }, completionHandler: { [weak self] in
+            self?.isAnimating = false
             self?.updateTerminalFrame()
             self?.terminalVC.focus()
         })
     }
 
     private func collapse() {
-        guard isExpanded else { return }
+        guard isExpanded, !isAnimating else { return }
+        isAnimating = true
         isExpanded = false
 
         let currentFrame = panel.frame
@@ -273,6 +273,7 @@ final class NotchWindowController: NSWindowController {
             ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.7, 0, 0.84, 0) // easeInExpo
             self.panel.animator().setFrame(hiddenFrame, display: true)
         }, completionHandler: { [weak self] in
+            self?.isAnimating = false
             self?.panel.makeFirstResponder(nil)
             // Actually hide the window after animation completes
             self?.panel.orderOut(nil)
