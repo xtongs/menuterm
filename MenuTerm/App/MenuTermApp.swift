@@ -6,10 +6,15 @@ struct MenuTermApp: App {
 
     var body: some Scene {
         Settings {
-            EmptyView()
+            SettingsView()
         }
         .commands {
-            CommandGroup(replacing: .appSettings) { }
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    AppDelegate.shared?.openSettingsWindow(nil)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
         }
     }
 }

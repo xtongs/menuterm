@@ -12,12 +12,16 @@
 		334062BBFC486FF3016754F1 /* logo.icon in Resources */ = {isa = PBXBuildFile; fileRef = 50F5B624EBE9F2500F5F9CE3 /* logo.icon */; };
 		6CC5462C162093D431C3B905 /* NotchGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93C68CA10C1CC618DA1FA488 /* NotchGeometry.swift */; };
 		7B4B7B91621726E4C4C34EEF /* TerminalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAFF11152CFCF7731424A1BD /* TerminalViewController.swift */; };
+		7F8B85D10A9C4EE985AA11C1 /* IMEAwareTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F8B85D00A9C4EE985AA11C1 /* IMEAwareTerminalView.swift */; };
+		80257E51067B48949F650FF1 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80257E50067B48949F650FF1 /* AppSettings.swift */; };
 		809A8E0D25D64030984D1FF5 /* NotchShapeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD76C34225828F6EECCA4BE /* NotchShapeView.swift */; };
 		936B0A1550C3D38B6A79922B /* MenuTermApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 730D077CB7243764F3621C18 /* MenuTermApp.swift */; };
 		98AD916B6585017B481433C4 /* NotchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D1D2C2256F13DFD59E5FE65 /* NotchPanel.swift */; };
 		AB65F5FB0DB7B4A018F951BC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D8C3D626D401DFDC11E11D8 /* AppDelegate.swift */; };
 		CB4D01212B8A92E88BB13245 /* NotchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D222CAE0F755DEC59DF8D14 /* NotchWindowController.swift */; };
 		EC4F9EE354A173CDF12C78A8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B393AAF5F57DCE1048DCB3AE /* Assets.xcassets */; };
+		F62639D6B4DB4D24B7469096 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62639D5B4DB4D24B7469096 /* SettingsView.swift */; };
+		F8B6E4C93C0B4B058A11E5F5 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8B6E4C83C0B4B058A11E5F5 /* SettingsWindowController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,11 +31,15 @@
 		50F5B624EBE9F2500F5F9CE3 /* logo.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = logo.icon; sourceTree = "<group>"; };
 		730D077CB7243764F3621C18 /* MenuTermApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuTermApp.swift; sourceTree = "<group>"; };
 		7D1916F8CBD1A4F1A3F50B43 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
+		7F8B85D00A9C4EE985AA11C1 /* IMEAwareTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMEAwareTerminalView.swift; sourceTree = "<group>"; };
+		80257E50067B48949F650FF1 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		93C68CA10C1CC618DA1FA488 /* NotchGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchGeometry.swift; sourceTree = "<group>"; };
 		A7E998819EC85692F53FDC18 /* MenuTerm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MenuTerm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ADD76C34225828F6EECCA4BE /* NotchShapeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchShapeView.swift; sourceTree = "<group>"; };
 		B393AAF5F57DCE1048DCB3AE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EAFF11152CFCF7731424A1BD /* TerminalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalViewController.swift; sourceTree = "<group>"; };
+		F62639D5B4DB4D24B7469096 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F8B6E4C83C0B4B058A11E5F5 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +66,7 @@
 		54B92C143BA916532652E377 /* Helpers */ = {
 			isa = PBXGroup;
 			children = (
+				80257E50067B48949F650FF1 /* AppSettings.swift */,
 				7D1916F8CBD1A4F1A3F50B43 /* HotkeyManager.swift */,
 				93C68CA10C1CC618DA1FA488 /* NotchGeometry.swift */,
 			);
@@ -91,6 +100,8 @@
 			children = (
 				4D8C3D626D401DFDC11E11D8 /* AppDelegate.swift */,
 				730D077CB7243764F3621C18 /* MenuTermApp.swift */,
+				F62639D5B4DB4D24B7469096 /* SettingsView.swift */,
+				F8B6E4C83C0B4B058A11E5F5 /* SettingsWindowController.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -98,6 +109,7 @@
 		C77EF6A83F0674FDFEBDFDD8 /* Terminal */ = {
 			isa = PBXGroup;
 			children = (
+				7F8B85D00A9C4EE985AA11C1 /* IMEAwareTerminalView.swift */,
 				EAFF11152CFCF7731424A1BD /* TerminalViewController.swift */,
 			);
 			path = Terminal;
@@ -193,12 +205,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB65F5FB0DB7B4A018F951BC /* AppDelegate.swift in Sources */,
+				80257E51067B48949F650FF1 /* AppSettings.swift in Sources */,
 				26A7A365809F2861F1EA422C /* HotkeyManager.swift in Sources */,
 				936B0A1550C3D38B6A79922B /* MenuTermApp.swift in Sources */,
 				6CC5462C162093D431C3B905 /* NotchGeometry.swift in Sources */,
 				98AD916B6585017B481433C4 /* NotchPanel.swift in Sources */,
+				7F8B85D10A9C4EE985AA11C1 /* IMEAwareTerminalView.swift in Sources */,
 				809A8E0D25D64030984D1FF5 /* NotchShapeView.swift in Sources */,
 				CB4D01212B8A92E88BB13245 /* NotchWindowController.swift in Sources */,
+				F62639D6B4DB4D24B7469096 /* SettingsView.swift in Sources */,
+				F8B6E4C93C0B4B058A11E5F5 /* SettingsWindowController.swift in Sources */,
 				7B4B7B91621726E4C4C34EEF /* TerminalViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -330,7 +346,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = logo;
 				CODE_SIGN_ENTITLEMENTS = Resources/MenuTerm.entitlements;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				DEVELOPMENT_TEAM = V349KLK84T;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -351,7 +369,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = logo;
 				CODE_SIGN_ENTITLEMENTS = Resources/MenuTerm.entitlements;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				DEVELOPMENT_TEAM = V349KLK84T;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;

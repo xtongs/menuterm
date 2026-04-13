@@ -10,6 +10,9 @@ final class NotchWindowController: NSWindowController {
     private var globalMouseMonitor: Any?
     private var localMouseMonitor: Any?
     private var screenObserver: NSObjectProtocol?
+    private var settingsObserver: NSObjectProtocol?
+    private var panelFocusObserver: NSObjectProtocol?
+    private var applicationFocusObserver: NSObjectProtocol?
 
     init() {
         super.init(window: panel)
@@ -17,6 +20,8 @@ final class NotchWindowController: NSWindowController {
         setupPanelEvents()
         setupMouseMonitors()
         setupScreenObserver()
+        setupSettingsObserver()
+        setupFocusObservers()
     }
 
     @available(*, unavailable)
@@ -32,16 +37,24 @@ final class NotchWindowController: NSWindowController {
         if let observer = screenObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        if let observer = settingsObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = panelFocusObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = applicationFocusObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     func showInitialWindow() {
         refreshGeometry()
-        panel.hasShadow = false
-        panel.setFrame(geometry.collapsedFrame, display: false)
-        shapeView.showsNotchCutout = false
-        terminalVC.view.alphaValue = 0
-        titleLabel.alphaValue = 0
-        panel.orderFrontRegardless()
+        let frame = geometry.expandedFrame
+        let hiddenFrame = NSRect(x: frame.origin.x, y: frame.origin.y + frame.height, width: frame.width, height: frame.height)
+        panel.setFrame(hiddenFrame, display: false)
+        panel.alphaValue = 1
+        panel.orderFront(nil)
     }
 
     override func showWindow(_ sender: Any?) {
@@ -53,6 +66,12 @@ final class NotchWindowController: NSWindowController {
     private func setupViews() {
         let container = NSView(frame: .zero)
         container.wantsLayer = true
+        if let layer = container.layer {
+            layer.shadowColor = NSColor.black.cgColor
+            layer.shadowOpacity = 0.5
+            layer.shadowRadius = 12
+            layer.shadowOffset = CGSize(width: 0, height: -4)
+        }
         panel.contentView = container
 
         // Background shape
@@ -67,24 +86,8 @@ final class NotchWindowController: NSWindowController {
         terminalVC.view.alphaValue = 1
         container.addSubview(terminalVC.view)
 
-        titleLabel.frame = titleRect(in: container.bounds)
-        titleLabel.autoresizingMask = [.width, .minYMargin]
-        titleLabel.alignment = .left
-        titleLabel.lineBreakMode = .byTruncatingMiddle
-        titleLabel.font = .systemFont(ofSize: 12, weight: .medium)
-        titleLabel.textColor = NSColor(white: 0.88, alpha: 0.92)
-        titleLabel.alphaValue = 1
-        container.addSubview(titleLabel)
-
-        terminalVC.onTitleChange = { [weak self] title in
-            self?.titleLabel.stringValue = title
-        }
-        terminalVC.onDirectoryChange = { [weak self] directory in
-            guard let self, self.titleLabel.stringValue == "MenuTerm" || self.titleLabel.stringValue.hasPrefix("/") else { return }
-            if let directory, !directory.isEmpty {
-                self.titleLabel.stringValue = directory
-            }
-        }
+        terminalVC.onTitleChange = { _ in }
+        terminalVC.onDirectoryChange = { _ in }
     }
 
     private func terminalContentRect(in bounds: NSRect) -> NSRect {
@@ -95,15 +98,6 @@ final class NotchWindowController: NSWindowController {
             y: inset,
             width: bounds.width - inset * 2,
             height: bounds.height - topInset - inset
-        )
-    }
-
-    private func titleRect(in bounds: NSRect) -> NSRect {
-        NSRect(
-            x: NotchGeometry.titleHorizontalInset,
-            y: bounds.height - geometry.titleTopInset - NotchGeometry.titleHeight,
-            width: bounds.width - NotchGeometry.titleHorizontalInset * 2,
-            height: NotchGeometry.titleHeight
         )
     }
 
@@ -137,6 +131,34 @@ final class NotchWindowController: NSWindowController {
         }
     }
 
+    private func setupSettingsObserver() {
+        settingsObserver = NotificationCenter.default.addObserver(
+            forName: .appSettingsDidChange,
+            object: AppSettings.shared,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleSettingsChange()
+        }
+    }
+
+    private func setupFocusObservers() {
+        panelFocusObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: panel,
+            queue: .main
+        ) { [weak self] _ in
+            self?.collapse()
+        }
+
+        applicationFocusObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: NSApp,
+            queue: .main
+        ) { [weak self] _ in
+            self?.collapse()
+        }
+    }
+
     private func handlePanelMouseDown(_ event: NSEvent) {
         guard event.type == .leftMouseDown, !isExpanded else { return }
         expand()
@@ -161,8 +183,24 @@ final class NotchWindowController: NSWindowController {
 
     private func handleScreenConfigurationChange() {
         refreshGeometry()
-        let targetFrame = isExpanded ? geometry.expandedFrame : geometry.collapsedFrame
-        panel.setFrame(targetFrame, display: true)
+        panel.setFrame(geometry.expandedFrame, display: true)
+    }
+
+    private func handleSettingsChange() {
+        refreshGeometry()
+
+        let targetFrame = geometry.expandedFrame
+        if isExpanded {
+            panel.setFrame(targetFrame, display: true)
+        } else {
+            let hiddenFrame = NSRect(
+                x: targetFrame.origin.x,
+                y: targetFrame.origin.y + targetFrame.height,
+                width: targetFrame.width,
+                height: targetFrame.height
+            )
+            panel.setFrame(hiddenFrame, display: true)
+        }
     }
 
     // MARK: - Toggle
@@ -176,22 +214,24 @@ final class NotchWindowController: NSWindowController {
         isExpanded = true
         refreshGeometry()
 
-        let targetFrame = geometry.expandedFrame
-
         if !terminalVC.isShellRunning {
             terminalVC.startShell()
         }
 
-        NSApp.activate(ignoringOtherApps: true)
-        panel.makeKeyAndOrderFront(nil)
-        panel.hasShadow = true
+        let targetFrame = geometry.expandedFrame
+        // Start from above the screen (hidden)
+        let hiddenFrame = NSRect(x: targetFrame.origin.x, y: targetFrame.origin.y + targetFrame.height, width: targetFrame.width, height: targetFrame.height)
+        panel.setFrame(hiddenFrame, display: true)
+        panel.alphaValue = 1
+
+        panel.orderFront(nil)
+        NSApp.activate(ignoringOtherApps: false)
+        panel.makeKey()
 
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.25
-            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            panel.animator().setFrame(targetFrame, display: true)
-            terminalVC.view.animator().alphaValue = 1
-            titleLabel.animator().alphaValue = 1
+            ctx.duration = 0.3
+            ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1) // easeOutExpo
+            self.panel.animator().setFrame(targetFrame, display: true)
         }, completionHandler: { [weak self] in
             self?.updateTerminalFrame()
             self?.terminalVC.focus()
@@ -201,17 +241,14 @@ final class NotchWindowController: NSWindowController {
     private func collapse() {
         guard isExpanded else { return }
         isExpanded = false
-        shapeView.showsNotchCutout = false
 
-        let targetFrame = geometry.collapsedFrame
-        panel.hasShadow = false
+        let currentFrame = panel.frame
+        let hiddenFrame = NSRect(x: currentFrame.origin.x, y: currentFrame.origin.y + currentFrame.height, width: currentFrame.width, height: currentFrame.height)
 
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.15
-            ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            panel.animator().setFrame(targetFrame, display: true)
-            terminalVC.view.animator().alphaValue = 0
-            titleLabel.animator().alphaValue = 0
+            ctx.duration = 0.25
+            ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.7, 0, 0.84, 0) // easeInExpo
+            self.panel.animator().setFrame(hiddenFrame, display: true)
         }, completionHandler: { [weak self] in
             self?.panel.makeFirstResponder(nil)
         })
@@ -241,9 +278,6 @@ final class NotchWindowController: NSWindowController {
     private func syncShapeView() {
         shapeView.notchWidth = geometry.notchWidth
         shapeView.notchHeight = geometry.notchHeight
-        shapeView.showsNotchCutout = isExpanded && geometry.hasNotch
-        if let content = panel.contentView {
-            titleLabel.frame = titleRect(in: content.bounds)
-        }
+        shapeView.showsNotchCutout = false
     }
 }

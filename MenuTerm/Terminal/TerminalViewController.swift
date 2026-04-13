@@ -2,10 +2,11 @@ import AppKit
 import SwiftTerm
 
 final class TerminalViewController: NSViewController, LocalProcessTerminalViewDelegate {
-    private(set) var terminalView: LocalProcessTerminalView?
+    private(set) var terminalView: IMEAwareTerminalView?
     var onTitleChange: ((String) -> Void)?
     var onDirectoryChange: ((String?) -> Void)?
     private var currentTitle = "MenuTerm"
+    private var settingsObserver: NSObjectProtocol?
 
     var isShellRunning: Bool {
         terminalView?.process.running ?? false
@@ -20,6 +21,7 @@ final class TerminalViewController: NSViewController, LocalProcessTerminalViewDe
     override func viewDidLoad() {
         super.viewDidLoad()
         installTerminalView()
+        setupSettingsObserver()
     }
 
     override func viewDidLayout() {
@@ -30,6 +32,9 @@ final class TerminalViewController: NSViewController, LocalProcessTerminalViewDe
     }
 
     deinit {
+        if let settingsObserver {
+            NotificationCenter.default.removeObserver(settingsObserver)
+        }
         stopShell()
     }
 
@@ -74,7 +79,7 @@ final class TerminalViewController: NSViewController, LocalProcessTerminalViewDe
     }
 
     private func installTerminalView() {
-        let terminalView = LocalProcessTerminalView(frame: view.bounds)
+        let terminalView = IMEAwareTerminalView(frame: view.bounds)
         terminalView.autoresizingMask = [.width, .height]
         terminalView.translatesAutoresizingMaskIntoConstraints = true
         terminalView.processDelegate = self
@@ -84,10 +89,18 @@ final class TerminalViewController: NSViewController, LocalProcessTerminalViewDe
         self.terminalView = terminalView
     }
 
+    private func setupSettingsObserver() {
+        settingsObserver = NotificationCenter.default.addObserver(
+            forName: .appSettingsDidChange,
+            object: AppSettings.shared,
+            queue: .main
+        ) { [weak self] _ in
+            self?.applyCurrentSettings()
+        }
+    }
+
     private func configureAppearance(for terminalView: LocalProcessTerminalView) {
-        let fontSize: CGFloat = 13
-        let font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
-        terminalView.font = font
+        terminalView.font = AppSettings.shared.terminalFont
         terminalView.wantsLayer = true
 
         let background = NSColor.black
@@ -109,6 +122,13 @@ final class TerminalViewController: NSViewController, LocalProcessTerminalViewDe
         terminalView.terminal.cursorColor = Color(red: 56360, green: 56360, blue: 56360)
 
         terminalView.optionAsMetaKey = true
+        updateScrollerAppearance(in: terminalView)
+    }
+
+    private func applyCurrentSettings() {
+        guard let terminalView else { return }
+        terminalView.font = AppSettings.shared.terminalFont
+        terminalView.needsDisplay = true
         updateScrollerAppearance(in: terminalView)
     }
 

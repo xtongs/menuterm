@@ -1,6 +1,6 @@
 import AppKit
 
-/// Draws the expanded terminal container with rounded corners on all sides.
+/// Draws the terminal container with square top corners and rounded bottom corners.
 final class NotchShapeView: NSView {
     var notchWidth: CGFloat = 180 {
         didSet { needsDisplay = true }
@@ -24,41 +24,31 @@ final class NotchShapeView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         let rect = bounds
-        let outerRadius = min(cornerRadius, min(rect.width, rect.height) / 2)
-        let path = NSBezierPath(roundedRect: rect, xRadius: outerRadius, yRadius: outerRadius)
+        let r = min(cornerRadius, min(rect.width, rect.height) / 2)
 
-        if showsNotchCutout {
-            let maxCutoutWidth = max(0, rect.width - outerRadius * 2 - 40)
-            let cutoutWidth = min(notchWidth, maxCutoutWidth)
-            let cutoutDepth = min(notchHeight, max(0, rect.height - outerRadius - 8))
-
-            if cutoutWidth > 40, cutoutDepth > 6 {
-                let innerRadius = min(12, cutoutWidth / 6, cutoutDepth - 1)
-                let cutoutLeft = rect.midX - cutoutWidth / 2
-                let cutoutRight = cutoutLeft + cutoutWidth
-                let cutoutBottom = cutoutDepth
-
-                let cutout = NSBezierPath()
-                cutout.move(to: NSPoint(x: cutoutLeft, y: 0))
-                cutout.line(to: NSPoint(x: cutoutLeft, y: cutoutBottom - innerRadius))
-                cutout.curve(
-                    to: NSPoint(x: cutoutLeft + innerRadius, y: cutoutBottom),
-                    controlPoint1: NSPoint(x: cutoutLeft, y: cutoutBottom - innerRadius * 0.45),
-                    controlPoint2: NSPoint(x: cutoutLeft + innerRadius * 0.45, y: cutoutBottom)
-                )
-                cutout.line(to: NSPoint(x: cutoutRight - innerRadius, y: cutoutBottom))
-                cutout.curve(
-                    to: NSPoint(x: cutoutRight, y: cutoutBottom - innerRadius),
-                    controlPoint1: NSPoint(x: cutoutRight - innerRadius * 0.45, y: cutoutBottom),
-                    controlPoint2: NSPoint(x: cutoutRight, y: cutoutBottom - innerRadius * 0.45)
-                )
-                cutout.line(to: NSPoint(x: cutoutRight, y: 0))
-                cutout.close()
-
-                path.append(cutout)
-                path.windingRule = .evenOdd
-            }
-        }
+        // Top corners square, bottom corners rounded
+        let path = NSBezierPath()
+        // Top-left (square)
+        path.move(to: NSPoint(x: rect.minX, y: rect.minY))
+        // Top-right (square)
+        path.line(to: NSPoint(x: rect.maxX, y: rect.minY))
+        // Right side down to bottom-right curve
+        path.line(to: NSPoint(x: rect.maxX, y: rect.maxY - r))
+        // Bottom-right (rounded)
+        path.curve(
+            to: NSPoint(x: rect.maxX - r, y: rect.maxY),
+            controlPoint1: NSPoint(x: rect.maxX, y: rect.maxY - r * 0.45),
+            controlPoint2: NSPoint(x: rect.maxX - r * 0.45, y: rect.maxY)
+        )
+        // Bottom side
+        path.line(to: NSPoint(x: rect.minX + r, y: rect.maxY))
+        // Bottom-left (rounded)
+        path.curve(
+            to: NSPoint(x: rect.minX, y: rect.maxY - r),
+            controlPoint1: NSPoint(x: rect.minX + r * 0.45, y: rect.maxY),
+            controlPoint2: NSPoint(x: rect.minX, y: rect.maxY - r * 0.45)
+        )
+        path.close()
 
         fillColor.setFill()
         path.fill()

@@ -15,14 +15,8 @@ struct NotchGeometry {
     static let minimumExpandedHeight: CGFloat = 360
     static let screenHorizontalMargin: CGFloat = 18
     static let screenBottomMargin: CGFloat = 28
-    static let fallbackCollapsedWidth: CGFloat = 200
-    static let fallbackCollapsedHeight: CGFloat = 22
     static let cornerRadius: CGFloat = 14
     static let contentInset: CGFloat = 8
-    static let titleHorizontalInset: CGFloat = 20
-    static let titleHeight: CGFloat = 18
-    static let titleSpacingBelowNotch: CGFloat = 12
-    static let titleSpacingAboveTerminal: CGFloat = 10
 
     init(screen: NSScreen = .main ?? NSScreen.screens[0]) {
         screenFrame = screen.frame
@@ -48,9 +42,9 @@ struct NotchGeometry {
 
     var expandedWidth: CGFloat {
         let availableWidth = max(420, screenFrame.width - Self.screenHorizontalMargin * 2)
-        let preferredWidth = hasNotch ? notchWidth + Self.preferredSideWingWidth * 2 : Self.fallbackExpandedWidth
-        let boundedPreferredWidth = min(Self.maximumExpandedWidth, preferredWidth)
-        return min(availableWidth, max(Self.minimumExpandedWidth, boundedPreferredWidth))
+        let preferredWidth = AppSettings.shared.preferredWindowWidth
+        let boundedPreferredWidth = min(Self.maximumExpandedWidth, max(Self.minimumExpandedWidth, preferredWidth))
+        return min(availableWidth, boundedPreferredWidth)
     }
 
     var expandedHeight: CGFloat {
@@ -58,21 +52,8 @@ struct NotchGeometry {
         if availableHeight <= Self.minimumExpandedHeight {
             return availableHeight
         }
-        return min(Self.maximumExpandedHeight, availableHeight)
-    }
-
-    var collapsedWidth: CGFloat {
-        guard hasNotch else { return Self.fallbackCollapsedWidth }
-        return max(120, notchWidth - 10)
-    }
-
-    var collapsedHeight: CGFloat {
-        guard hasNotch else { return Self.fallbackCollapsedHeight }
-        return max(10, round(notchHeight * 0.45))
-    }
-
-    var titleTopInset: CGFloat {
-        (hasNotch ? notchHeight : 0) + Self.titleSpacingBelowNotch
+        let preferredHeight = max(Self.minimumExpandedHeight, AppSettings.shared.preferredWindowHeight)
+        return min(availableHeight, min(Self.maximumExpandedHeight, preferredHeight))
     }
 
     /// Panel frame when expanded, anchored to screen top center.
@@ -82,15 +63,8 @@ struct NotchGeometry {
         return NSRect(x: x, y: y, width: expandedWidth, height: expandedHeight)
     }
 
-    /// Panel frame when collapsed and tucked into the notch area.
-    var collapsedFrame: NSRect {
-        let x = screenFrame.midX - collapsedWidth / 2
-        let y = screenFrame.maxY - collapsedHeight
-        return NSRect(x: x, y: y, width: collapsedWidth, height: collapsedHeight)
-    }
-
-    /// Inset for terminal content, leaving room for the notch cutout and title row.
+    /// Inset for terminal content, leaving room for the notch area.
     var terminalTopInset: CGFloat {
-        titleTopInset + Self.titleHeight + Self.titleSpacingAboveTerminal
+        (hasNotch ? notchHeight : 0) + Self.contentInset
     }
 }
