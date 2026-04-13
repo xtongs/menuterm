@@ -13,6 +13,7 @@ final class NotchWindowController: NSWindowController {
     private var settingsObserver: NSObjectProtocol?
     private var panelFocusObserver: NSObjectProtocol?
     private var applicationFocusObserver: NSObjectProtocol?
+    private var sleepWakeObserver: NSObjectProtocol?
 
     init() {
         super.init(window: panel)
@@ -22,6 +23,7 @@ final class NotchWindowController: NSWindowController {
         setupScreenObserver()
         setupSettingsObserver()
         setupFocusObservers()
+        setupSleepWakeObserver()
     }
 
     @available(*, unavailable)
@@ -46,6 +48,9 @@ final class NotchWindowController: NSWindowController {
         if let observer = applicationFocusObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        if let observer = sleepWakeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     func showInitialWindow() {
@@ -54,7 +59,7 @@ final class NotchWindowController: NSWindowController {
         let hiddenFrame = NSRect(x: frame.origin.x, y: frame.origin.y + frame.height, width: frame.width, height: frame.height)
         panel.setFrame(hiddenFrame, display: false)
         panel.alphaValue = 1
-        panel.orderFront(nil)
+        // Don't orderFront - keep window hidden until expand is called
     }
 
     override func showWindow(_ sender: Any?) {
@@ -159,6 +164,17 @@ final class NotchWindowController: NSWindowController {
         }
     }
 
+    private func setupSleepWakeObserver() {
+        sleepWakeObserver = NotificationCenter.default.addObserver(
+            forName: NSWorkspace.screensDidSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            // Hide window when screen sleeps to prevent flash on wake
+            self?.panel.orderOut(nil)
+        }
+    }
+
     private func handlePanelMouseDown(_ event: NSEvent) {
         guard event.type == .leftMouseDown, !isExpanded else { return }
         expand()
@@ -221,9 +237,10 @@ final class NotchWindowController: NSWindowController {
         let targetFrame = geometry.expandedFrame
         // Start from above the screen (hidden)
         let hiddenFrame = NSRect(x: targetFrame.origin.x, y: targetFrame.origin.y + targetFrame.height, width: targetFrame.width, height: targetFrame.height)
-        panel.setFrame(hiddenFrame, display: true)
+        panel.setFrame(hiddenFrame, display: false)
         panel.alphaValue = 1
 
+        // Order front before animation
         panel.orderFront(nil)
         NSApp.activate(ignoringOtherApps: false)
         panel.makeKey()
@@ -251,6 +268,8 @@ final class NotchWindowController: NSWindowController {
             self.panel.animator().setFrame(hiddenFrame, display: true)
         }, completionHandler: { [weak self] in
             self?.panel.makeFirstResponder(nil)
+            // Actually hide the window after animation completes
+            self?.panel.orderOut(nil)
         })
     }
 
