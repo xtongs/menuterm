@@ -28,3 +28,7 @@ Thumbs.db
 
 # .derivedData (local package checkout)
 .derivedData/
+
+# Archive
+build_archive/
+*.xcarchive
