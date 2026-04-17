@@ -1,7 +1,7 @@
 import AppKit
 
 final class NotchPanel: NSPanel {
-    static let panelLevel: NSWindow.Level = .mainMenu + 1
+    static let panelLevel: NSWindow.Level = .mainMenu - 1
     static let settingsLevel = NSWindow.Level(rawValue: panelLevel.rawValue + 1)
 
     var onLeftMouseDown: ((NSEvent) -> Void)?
