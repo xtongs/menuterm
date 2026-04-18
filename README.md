@@ -45,6 +45,17 @@ xcodebuild -project MenuTerm.xcodeproj -scheme MenuTerm -configuration Debug bui
 | Release | `build/Release/MenuTerm.app` |
 | Archive | `build/MenuTerm.xcarchive` |
 
+## GitHub Releases
+
+This repository can publish an unsigned macOS app bundle to GitHub Releases.
+
+- Trigger: push a tag like `v1.0.0`, or run the `Release` workflow manually.
+- Manual runs derive the tag from `MARKETING_VERSION` in `project.yml`, for example `1.0.0` -> `v1.0.0`.
+- Output: `MenuTerm-<tag>-macos-unsigned.zip`
+- Extra file: `MenuTerm-<tag>-macos-unsigned.zip.sha256`
+
+Because the release artifact is unsigned and not notarized, macOS may warn on first launch. This flow is intended for internal distribution or technically capable users, not for general public release.
+
 ## Features
 
 - 适配 macOS 刘海屏的终端模拟器

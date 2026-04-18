@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build And Publish
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve Release Version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            VERSION="$(sed -n 's/.*MARKETING_VERSION: "\(.*\)"/\1/p' project.yml | head -n 1)"
+            VERSION="v${VERSION}"
+          else
+            VERSION="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ -z "${VERSION}" || "${VERSION}" == "v" ]]; then
+            echo "Release version is empty" >&2
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build (Release, unsigned)
+        run: |
+          xcodebuild build \
+            -project MenuTerm.xcodeproj \
+            -scheme MenuTerm \
+            -configuration Release \
+            -derivedDataPath build/CI \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Locate App Bundle
+        id: locate
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_PATH="build/CI/Build/Products/Release/MenuTerm.app"
+          if [[ ! -d "${APP_PATH}" ]]; then
+            echo "MenuTerm.app not found at ${APP_PATH}" >&2
+            exit 1
+          fi
+          echo "app_path=${APP_PATH}" >> "$GITHUB_OUTPUT"
+
+      - name: Package Assets
+        id: pkg
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          ZIP_NAME="MenuTerm-${VERSION}-macos-unsigned.zip"
+
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent \
+            "${{ steps.locate.outputs.app_path }}" \
+            "dist/${ZIP_NAME}"
+
+          shasum -a 256 "dist/${ZIP_NAME}" > "dist/${ZIP_NAME}.sha256"
+
+          echo "zip_path=dist/${ZIP_NAME}" >> "$GITHUB_OUTPUT"
+          echo "sha_path=dist/${ZIP_NAME}.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            ${{ steps.pkg.outputs.zip_path }}
+            ${{ steps.pkg.outputs.sha_path }}
