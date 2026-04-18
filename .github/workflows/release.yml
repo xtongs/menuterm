@@ -27,7 +27,7 @@ jobs:
       - name: Downgrade Project Format For Xcode 15
         run: |
           perl -0pi -e 's/objectVersion = 77;/objectVersion = 60;/g; s/preferredProjectObjectVersion = 77;/preferredProjectObjectVersion = 60;/g' MenuTerm.xcodeproj/project.pbxproj
-          rg -n "objectVersion|preferredProjectObjectVersion" MenuTerm.xcodeproj/project.pbxproj
+          grep -nE "objectVersion|preferredProjectObjectVersion" MenuTerm.xcodeproj/project.pbxproj
 
       - name: Resolve Release Version
         id: version
