@@ -12,6 +12,7 @@ final class NotchWindowController: NSWindowController {
     private var screenObserver: NSObjectProtocol?
     private var settingsObserver: NSObjectProtocol?
     private var sleepWakeObserver: NSObjectProtocol?
+    private var resignActiveObserver: NSObjectProtocol?
     private var isAnimating = false
 
     init() {
@@ -22,6 +23,7 @@ final class NotchWindowController: NSWindowController {
         setupScreenObserver()
         setupSettingsObserver()
         setupSleepWakeObserver()
+        setupResignActiveObserver()
     }
 
     @available(*, unavailable)
@@ -41,6 +43,9 @@ final class NotchWindowController: NSWindowController {
             NotificationCenter.default.removeObserver(observer)
         }
         if let observer = sleepWakeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = resignActiveObserver {
             NotificationCenter.default.removeObserver(observer)
         }
     }
@@ -146,6 +151,16 @@ final class NotchWindowController: NSWindowController {
         ) { [weak self] _ in
             // Hide window when screen sleeps to prevent flash on wake
             self?.panel.orderOut(nil)
+        }
+    }
+
+    private func setupResignActiveObserver() {
+        resignActiveObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.collapse()
         }
     }
 
