@@ -11,7 +11,7 @@ final class NotchWindowController: NSWindowController {
     private var localMouseMonitor: Any?
     private var screenObserver: NSObjectProtocol?
     private var settingsObserver: NSObjectProtocol?
-    private var sleepWakeObserver: NSObjectProtocol?
+    private var sleepWakeObservers: [NSObjectProtocol] = []
     private var resignActiveObserver: NSObjectProtocol?
     private var isAnimating = false
 
@@ -42,8 +42,8 @@ final class NotchWindowController: NSWindowController {
         if let observer = settingsObserver {
             NotificationCenter.default.removeObserver(observer)
         }
-        if let observer = sleepWakeObserver {
-            NotificationCenter.default.removeObserver(observer)
+        for observer in sleepWakeObservers {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
         }
         if let observer = resignActiveObserver {
             NotificationCenter.default.removeObserver(observer)
@@ -51,12 +51,8 @@ final class NotchWindowController: NSWindowController {
     }
 
     func showInitialWindow() {
-        refreshGeometry()
-        let frame = geometry.expandedFrame
-        let hiddenFrame = NSRect(x: frame.origin.x, y: frame.origin.y + frame.height, width: frame.width, height: frame.height)
-        panel.setFrame(hiddenFrame, display: false)
         panel.alphaValue = 1
-        // Don't orderFront - keep window hidden until expand is called
+        hideImmediately()
     }
 
     override func showWindow(_ sender: Any?) {
@@ -144,13 +140,20 @@ final class NotchWindowController: NSWindowController {
     }
 
     private func setupSleepWakeObserver() {
-        sleepWakeObserver = NotificationCenter.default.addObserver(
-            forName: NSWorkspace.screensDidSleepNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            // Hide window when screen sleeps to prevent flash on wake
-            self?.panel.orderOut(nil)
+        let notificationCenter = NSWorkspace.shared.notificationCenter
+        let notifications: [Notification.Name] = [
+            NSWorkspace.screensDidSleepNotification,
+            NSWorkspace.screensDidWakeNotification
+        ]
+
+        sleepWakeObservers = notifications.map { name in
+            notificationCenter.addObserver(
+                forName: name,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.hideImmediately()
+            }
         }
     }
 
@@ -211,6 +214,9 @@ final class NotchWindowController: NSWindowController {
     // MARK: - Toggle
 
     func toggle() {
+        if isExpanded && !panel.isVisible {
+            hideImmediately()
+        }
         isExpanded ? collapse() : expand()
     }
 
@@ -240,9 +246,10 @@ final class NotchWindowController: NSWindowController {
             ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1) // easeOutExpo
             self.panel.animator().setFrame(targetFrame, display: true)
         }, completionHandler: { [weak self] in
-            self?.isAnimating = false
-            self?.updateTerminalFrame()
-            self?.terminalVC.focus()
+            guard let self, self.isExpanded else { return }
+            self.isAnimating = false
+            self.updateTerminalFrame()
+            self.terminalVC.focus()
         })
     }
 
@@ -259,11 +266,28 @@ final class NotchWindowController: NSWindowController {
             ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.7, 0, 0.84, 0) // easeInExpo
             self.panel.animator().setFrame(hiddenFrame, display: true)
         }, completionHandler: { [weak self] in
-            self?.isAnimating = false
-            self?.panel.makeFirstResponder(nil)
-            // Actually hide the window after animation completes
-            self?.panel.orderOut(nil)
+            guard let self, !self.isExpanded else { return }
+            self.isAnimating = false
+            self.panel.makeFirstResponder(nil)
+            self.panel.orderOut(nil)
         })
+    }
+
+    private func hideImmediately() {
+        isExpanded = false
+        isAnimating = false
+        refreshGeometry()
+
+        let frame = geometry.expandedFrame
+        let hiddenFrame = NSRect(
+            x: frame.origin.x,
+            y: frame.origin.y + frame.height,
+            width: frame.width,
+            height: frame.height
+        )
+        panel.makeFirstResponder(nil)
+        panel.setFrame(hiddenFrame, display: false)
+        panel.orderOut(nil)
     }
 
     private func updateTerminalFrame() {
