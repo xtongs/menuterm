@@ -85,6 +85,21 @@ Because the release artifact is unsigned and not notarized, macOS may warn on fi
 
 ## App Icon
 
-The app icon now uses the `logo.icon` Icon Composer document instead of a
-legacy `AppIcon.appiconset`, so Xcode can render the macOS icon using the
-current system icon pipeline.
+`logo.icon` is the Icon Composer source used by newer Xcode versions.
+`MenuTerm/Assets.xcassets/logo.appiconset` contains a checked-in PNG fallback
+with the same name for older Xcode versions (including Xcode 15.4 on the
+`macos-14` release runner). Both build paths produce a compiled app icon.
+
+After changing the Icon Composer document, regenerate the fallback on a Mac
+with Icon Composer installed:
+
+```bash
+./scripts/generate-app-icon.sh
+```
+
+The release workflow validates the icon metadata and decodes the packaged
+`.icns` before publishing. To run the same check locally:
+
+```bash
+./scripts/verify-app-icon.sh build/Release/MenuTerm.app
+```

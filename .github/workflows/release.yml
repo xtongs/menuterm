@@ -71,6 +71,9 @@ jobs:
           fi
           echo "app_path=${APP_PATH}" >> "$GITHUB_OUTPUT"
 
+      - name: Verify App Icon
+        run: ./scripts/verify-app-icon.sh "${{ steps.locate.outputs.app_path }}"
+
       - name: Package Assets
         id: pkg
         shell: bash

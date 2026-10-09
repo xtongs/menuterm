@@ -93,8 +93,11 @@ private enum TerminalLayoutTests {
 
         // Verify the real window hierarchy too, without showing it or starting a shell.
         let windowController = NotchWindowController()
-        windowController.showInitialWindow()
         let actualWindow = windowController.window!
+        // Capture the target screen before hiding: an offscreen panel may overlap
+        // another display above it, which must not change the expected notch inset.
+        let topInset = NotchGeometry(screen: actualWindow.screen ?? NSScreen.main!).terminalTopInset
+        windowController.showInitialWindow()
         let actualContent = actualWindow.contentView!
         let host = actualContent.subviews.first { child in
             child.subviews.contains { $0 is IMEAwareTerminalView }
@@ -113,7 +116,6 @@ private enum TerminalLayoutTests {
                   "Real panel must keep equal outer content insets: host=\(host.frame), content=\(actualContent.bounds)")
             check(abs(host.frame.minY - inset) < 0.001,
                   "Real panel must preserve bottom padding: host=\(host.frame), content=\(actualContent.bounds)")
-            let topInset = NotchGeometry(screen: actualWindow.screen ?? NSScreen.main!).terminalTopInset
             check(abs(actualContent.bounds.height - host.frame.maxY - topInset) < 0.001,
                   "Real panel must preserve notch clearance above the terminal")
             check(!host.hasAmbiguousLayout, "Real panel's content constraints are unambiguous")
