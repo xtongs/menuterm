@@ -15,6 +15,7 @@ final class TerminalViewController: NSViewController, LocalProcessTerminalViewDe
     override func loadView() {
         view = NSView()
         view.wantsLayer = true
+        view.clipsToBounds = true
         view.layer?.backgroundColor = NSColor.black.cgColor
     }
 
@@ -26,9 +27,7 @@ final class TerminalViewController: NSViewController, LocalProcessTerminalViewDe
 
     override func viewDidLayout() {
         super.viewDidLayout()
-        if let terminalView {
-            updateScrollerAppearance(in: terminalView)
-        }
+        layoutTerminalView()
     }
 
     deinit {
@@ -78,15 +77,63 @@ final class TerminalViewController: NSViewController, LocalProcessTerminalViewDe
         view.window?.makeFirstResponder(terminalView)
     }
 
+    func handleScrollWheel(with event: NSEvent) -> Bool {
+        guard let terminalView,
+              let window = terminalView.window,
+              event.window === window,
+              !terminalView.isHiddenOrHasHiddenAncestor,
+              let contentView = window.contentView,
+              let hitView = contentView.hitTest(contentView.convert(event.locationInWindow, from: nil)),
+              hitView === terminalView || hitView.isDescendant(of: terminalView) else {
+            return false
+        }
+        terminalView.handleScrollWheel(with: event)
+        return true
+    }
+
     private func installTerminalView() {
         let terminalView = IMEAwareTerminalView(frame: view.bounds)
-        terminalView.autoresizingMask = [.width, .height]
+        terminalView.autoresizingMask = []
         terminalView.translatesAutoresizingMaskIntoConstraints = true
         terminalView.processDelegate = self
 
         configureAppearance(for: terminalView)
         view.addSubview(terminalView)
         self.terminalView = terminalView
+        layoutTerminalView()
+    }
+
+    private func layoutTerminalView() {
+        guard let terminalView else { return }
+        updateScrollerAppearance(in: terminalView)
+
+        let cellSize = terminalView.caretFrame.size
+        let bounds = view.bounds
+        guard cellSize.width > 0, cellSize.height > 0,
+              bounds.width >= cellSize.width * 2, bounds.height >= cellSize.height else { return }
+
+        let terminal = terminalView.getTerminal()
+        // SwiftTerm subtracts a legacy scroller gutter when calculating columns,
+        // even when its NSScroller is hidden and has a zero-width constraint.
+        // Keep that gutter outside the clipped host, not inside the visible grid.
+        let gutterWidth = max(0, terminalView.getOptimalFrameSize().width - CGFloat(terminal.cols) * cellSize.width)
+        let columns = Int(bounds.width / cellSize.width)
+        let gridWidth = CGFloat(columns) * cellSize.width
+        let scale = view.window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 1
+        let leftPadding = (((bounds.width - gridWidth) / 2) * scale).rounded(.down) / scale
+        let frame = NSRect(x: bounds.minX + leftPadding, y: bounds.minY,
+                           width: gridWidth + gutterWidth, height: bounds.height)
+        if terminalView.frame != frame {
+            terminalView.frame = frame
+        }
+
+        // A font reset counts the gutter as content, unlike setFrameSize. Force
+        // the normal resize path if the frame stayed equal; resize(cols:rows:)
+        // would soft-reset terminal modes and must not be used for layout.
+        let rows = Int(bounds.height / cellSize.height)
+        if terminal.cols != columns || terminal.rows != rows {
+            terminalView.setFrameSize(frame.size)
+        }
     }
 
     private func setupSettingsObserver() {
@@ -129,7 +176,7 @@ final class TerminalViewController: NSViewController, LocalProcessTerminalViewDe
         guard let terminalView else { return }
         terminalView.font = AppSettings.shared.terminalFont
         terminalView.needsDisplay = true
-        updateScrollerAppearance(in: terminalView)
+        layoutTerminalView()
     }
 
     private func updateTitle(_ title: String) {

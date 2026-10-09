@@ -45,6 +45,24 @@ xcodebuild -project MenuTerm.xcodeproj -scheme MenuTerm -configuration Debug bui
 | Release | `build/Release/MenuTerm.app` |
 | Archive | `build/MenuTerm.xcarchive` |
 
+## 滚动与布局回归测试
+
+```bash
+./Tests/run-scroll-tests.sh
+# 已运行 ./build.sh 时可跳过重复构建
+./Tests/run-scroll-tests.sh --skip-build
+```
+
+测试在进程内模拟鼠标和触摸板事件，覆盖窗口事件转发、历史回滚、鼠标上报、
+全屏程序的方向键回退，以及触摸板小幅移动和惯性滚动；不需要辅助功能权限。
+布局测试验证不同窗口宽度、字号及全屏模式下的左右内容边距、末列命中和隐藏滚动条占位。
+
+真机验证：
+- 运行 `seq 1 200`，用滚轮或双指上下滚动查看历史输出。
+- 运行 `seq 1 200 | less`，确认全屏分页器可上下滚动，按 `q` 退出。
+- 在启用鼠标支持的 TUI（例如 Vim 中执行 `:set mouse=a`）中确认滚动由程序处理。
+- 调整窗口宽度和字号，确认 TUI 的左右边框留白一致，右侧滚动条随内容末列对齐。
+
 ## GitHub Releases
 
 This repository can publish an unsigned macOS app bundle to GitHub Releases.
@@ -61,6 +79,7 @@ Because the release artifact is unsigned and not notarized, macOS may warn on fi
 - 适配 macOS 刘海屏的终端模拟器
 - 全局快捷键 `Ctrl + `` 切换显示/隐藏
 - 失去焦点自动隐藏
+- 鼠标滚轮和触摸板双指滚动，支持历史回滚及终端内交互程序
 - 支持浅色/深色主题
 - 可调节高度和透明度（设置窗口：`Cmd + ,`）
 

@@ -5,6 +5,7 @@ final class NotchWindowController: NSWindowController {
     private let terminalVC = TerminalViewController()
     private let shapeView = NotchShapeView()
     private let titleLabel = NSTextField(labelWithString: "MenuTerm")
+    private var terminalTopConstraint: NSLayoutConstraint?
     private var isExpanded = false
     private var geometry = NotchGeometry()
     private var globalMouseMonitor: Any?
@@ -62,7 +63,11 @@ final class NotchWindowController: NSWindowController {
     // MARK: - Setup
 
     private func setupViews() {
-        let container = NSView(frame: .zero)
+        // Start with a valid content size before installing the inset constraints.
+        // A zero-sized window used to create a negative terminal frame whose
+        // autoresizing mask could turn the insets into outward overflow.
+        panel.setFrame(geometry.expandedFrame, display: false)
+        let container = NSView(frame: NSRect(origin: .zero, size: panel.frame.size))
         container.wantsLayer = true
         if let layer = container.layer {
             layer.shadowColor = NSColor.black.cgColor
@@ -79,29 +84,30 @@ final class NotchWindowController: NSWindowController {
         syncShapeView()
 
         // Terminal
-        terminalVC.view.frame = terminalContentRect(in: container.bounds)
-        terminalVC.view.autoresizingMask = [.width, .height]
-        terminalVC.view.alphaValue = 1
+        terminalVC.view.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(terminalVC.view)
+        let inset = NotchGeometry.contentInset
+        let topConstraint = terminalVC.view.topAnchor.constraint(
+            equalTo: container.topAnchor, constant: geometry.terminalTopInset)
+        terminalTopConstraint = topConstraint
+        NSLayoutConstraint.activate([
+            terminalVC.view.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: inset),
+            terminalVC.view.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -inset),
+            terminalVC.view.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -inset),
+            topConstraint
+        ])
+        container.layoutSubtreeIfNeeded()
 
         terminalVC.onTitleChange = { _ in }
         terminalVC.onDirectoryChange = { _ in }
     }
 
-    private func terminalContentRect(in bounds: NSRect) -> NSRect {
-        let inset = NotchGeometry.contentInset
-        let topInset = geometry.terminalTopInset
-        return NSRect(
-            x: inset,
-            y: inset,
-            width: bounds.width - inset * 2,
-            height: bounds.height - topInset - inset
-        )
-    }
-
     private func setupPanelEvents() {
         panel.onLeftMouseDown = { [weak self] event in
             self?.handlePanelMouseDown(event)
+        }
+        panel.onScrollWheel = { [weak self] event in
+            self?.terminalVC.handleScrollWheel(with: event) ?? false
         }
     }
 
@@ -291,8 +297,8 @@ final class NotchWindowController: NSWindowController {
     }
 
     private func updateTerminalFrame() {
-        guard let content = panel.contentView else { return }
-        terminalVC.view.frame = terminalContentRect(in: content.bounds)
+        terminalTopConstraint?.constant = geometry.terminalTopInset
+        panel.contentView?.layoutSubtreeIfNeeded()
     }
 
     func restartShell() {

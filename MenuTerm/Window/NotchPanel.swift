@@ -5,6 +5,7 @@ final class NotchPanel: NSPanel {
     static let settingsLevel = NSWindow.Level(rawValue: panelLevel.rawValue + 1)
 
     var onLeftMouseDown: ((NSEvent) -> Void)?
+    var onScrollWheel: ((NSEvent) -> Bool)?
 
     init() {
         super.init(
@@ -29,6 +30,9 @@ final class NotchPanel: NSPanel {
     }
 
     override func sendEvent(_ event: NSEvent) {
+        if event.type == .scrollWheel, onScrollWheel?(event) == true {
+            return
+        }
         if event.type == .leftMouseDown {
             onLeftMouseDown?(event)
         }
