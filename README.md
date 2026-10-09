@@ -65,14 +65,52 @@ xcodebuild -project MenuTerm.xcodeproj -scheme MenuTerm -configuration Debug bui
 
 ## GitHub Releases
 
-This repository can publish an unsigned macOS app bundle to GitHub Releases.
+This repository publishes ad-hoc signed macOS app bundles to GitHub Releases.
+The bundle signature seals the executable, Info.plist, and resources; it is
+**not** a Developer ID signature and the app is **not notarized by Apple**.
 
 - Trigger: push a tag like `v1.0.0`, or run the `Release` workflow manually.
 - Manual runs derive the tag from `MARKETING_VERSION` in `project.yml`, for example `1.0.0` -> `v1.0.0`.
-- Output: `MenuTerm-<tag>-macos-unsigned.zip`
-- Extra file: `MenuTerm-<tag>-macos-unsigned.zip.sha256`
+- Output: `MenuTerm-<tag>-macos-adhoc.zip`
+- Extra file: `MenuTerm-<tag>-macos-adhoc.zip.sha256`
+- CI verifies the bundle signature and app icon before packaging and after extracting the ZIP.
 
-Because the release artifact is unsigned and not notarized, macOS may warn on first launch. This flow is intended for internal distribution or technically capable users, not for general public release.
+### 首次打开下载的应用
+
+临时签名只校验应用包完整性，不提供 Apple 信任或公证。macOS 仍可能阻止首次启动；
+此发布方式适合信任本项目的用户，并不等同于正式签名、公证的发行方式。
+
+1. 从本仓库 Release 下载 ZIP 和 `.sha256` 文件。在同一目录执行
+   `shasum -a 256 -c MenuTerm-<tag>-macos-adhoc.zip.sha256`，确认校验通过。
+2. 解压并将 `MenuTerm.app` 放入 `/Applications`。
+3. 验证应用包：`codesign --verify --deep --strict --verbose=2 /Applications/MenuTerm.app`。
+   如果失败，请不要跳过校验，重新下载或反馈问题。
+4. 尝试打开，再到「系统设置 → 隐私与安全性」选择「仍要打开」（如有）。
+   如果仍被阻止，且你确认来源并信任该应用，可以仅移除这份应用的下载隔离标记：
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/MenuTerm.app
+   open /Applications/MenuTerm.app
+   ```
+
+这会绕过该应用的首次下载隔离检查，但不会关闭整个系统的 Gatekeeper。不要对未知来源的应用执行。
+要实现下载后无需手动放行，需要配置有效的 Developer ID Application 证书和 Apple 公证凭据。
+
+### 旧版 v1.0.8 的“已损坏”提示
+
+旧版 CI 禁用了应用签名，ARM 链接器只给可执行文件添加临时签名，没有签署应用包资源，
+因此会报 `code has no resources but signature indicates they must be present`。
+如果必须使用这份旧版、且已确认来自本仓库，可以先本地重签，再移除这份应用的隔离标记：
+
+```bash
+APP="/Applications/MenuTerm.app"
+codesign --force --sign - --timestamp=none "$APP" &&
+codesign --verify --deep --strict "$APP" &&
+xattr -dr com.apple.quarantine "$APP" &&
+open "$APP"
+```
+
+重签不会证明原下载内容可信，也不等同于 Apple 公证；不要用它跳过未知文件的完整性失败。
 
 ## Features
 

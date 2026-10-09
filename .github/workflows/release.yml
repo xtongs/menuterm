@@ -48,16 +48,17 @@ jobs:
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Build (Release, unsigned)
+      - name: Build (Release, ad-hoc signed)
         run: |
           xcodebuild build \
             -project MenuTerm.xcodeproj \
             -scheme MenuTerm \
             -configuration Release \
             -derivedDataPath build/CI \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGN_IDENTITY="-" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp=none"
 
       - name: Locate App Bundle
         id: locate
@@ -71,8 +72,8 @@ jobs:
           fi
           echo "app_path=${APP_PATH}" >> "$GITHUB_OUTPUT"
 
-      - name: Verify App Icon
-        run: ./scripts/verify-app-icon.sh "${{ steps.locate.outputs.app_path }}"
+      - name: Verify App Signature And Icon
+        run: ./scripts/verify-release-app.sh "${{ steps.locate.outputs.app_path }}"
 
       - name: Package Assets
         id: pkg
@@ -80,14 +81,20 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${{ steps.version.outputs.version }}"
-          ZIP_NAME="MenuTerm-${VERSION}-macos-unsigned.zip"
+          ZIP_NAME="MenuTerm-${VERSION}-macos-adhoc.zip"
 
           mkdir -p dist
           ditto -c -k --sequesterRsrc --keepParent \
             "${{ steps.locate.outputs.app_path }}" \
             "dist/${ZIP_NAME}"
 
-          shasum -a 256 "dist/${ZIP_NAME}" > "dist/${ZIP_NAME}.sha256"
+          # Verify the archived app too: copying/packaging must preserve its seal.
+          VERIFY_DIR="$(mktemp -d)"
+          trap 'rm -rf "$VERIFY_DIR"' EXIT
+          ditto -x -k "dist/${ZIP_NAME}" "$VERIFY_DIR"
+          ./scripts/verify-release-app.sh "$VERIFY_DIR/MenuTerm.app"
+
+          (cd dist && shasum -a 256 "${ZIP_NAME}" > "${ZIP_NAME}.sha256")
 
           echo "zip_path=dist/${ZIP_NAME}" >> "$GITHUB_OUTPUT"
           echo "sha_path=dist/${ZIP_NAME}.sha256" >> "$GITHUB_OUTPUT"
@@ -99,6 +106,9 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: ${{ steps.version.outputs.version }}
           generate_release_notes: true
+          body: |
+            This build is ad-hoc signed, not Developer ID signed or notarized by Apple.
+            macOS may block the first launch; see the README's installation instructions.
           files: |
             ${{ steps.pkg.outputs.zip_path }}
             ${{ steps.pkg.outputs.sha_path }}
