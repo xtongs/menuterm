@@ -23,8 +23,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.menuterm.app
         ASSETCATALOG_COMPILER_APPICON_NAME: logo
-        MARKETING_VERSION: "1.0.9"
-        CURRENT_PROJECT_VERSION: "4"
+        MARKETING_VERSION: "1.0.10"
+        CURRENT_PROJECT_VERSION: "5"
         CODE_SIGN_ENTITLEMENTS: Resources/MenuTerm.entitlements
         SWIFT_VERSION: "5.9"
         CODE_SIGN_IDENTITY: "-"

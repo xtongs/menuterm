@@ -128,16 +128,40 @@ open "$APP"
 with the same name for older Xcode versions (including Xcode 15.4 on the
 `macos-14` release runner). Both build paths produce a compiled app icon.
 
-After changing the Icon Composer document, regenerate the fallback on a Mac
-with Icon Composer installed:
+The fallback is rendered from the SVG artwork and its scale/position in
+`logo.icon/icon.json`, using a flat rounded black tile, soft drop shadow and
+transparent macOS margins. The glyph stays RGB cool-white rather than exact
+grayscale: the grayscale catalog representation can acquire an unwanted white
+backing tile on macOS 27. Do **not** generate it by resizing an
+`ictool --export-image` preview:
+that preview bakes in a full-bleed glass edge/mask, which macOS's legacy-icon
+rendering can turn into short bright vertical seams on both sides. Native
+Icon Composer builds keep their layered material rendering.
+
+After changing the artwork, regenerate the fallback on a Mac with Xcode:
 
 ```bash
 ./scripts/generate-app-icon.sh
 ```
 
-The release workflow validates the icon metadata and decodes the packaged
-`.icns` before publishing. To run the same check locally:
+The generator uses AppKit, without Icon Composer or third-party dependencies.
+It currently supports this icon's single visible SVG layer on a black tile;
+revisit the generator when changing the layer structure or background color.
+
+The release workflow validates the icon metadata, decodes the packaged `.icns`,
+and runs icon regression tests before publishing. To run these checks locally:
 
 ```bash
 ./scripts/verify-app-icon.sh build/Release/MenuTerm.app
+./Tests/run-icon-tests.sh build/Release/MenuTerm.app
+# Source + legacy ICNS/catalog tests, without building the app:
+./Tests/run-icon-tests.sh
 ```
+
+The tests check all ten PNG sizes for transparent margins and unlit edges,
+then render an ICNS-only fixture, an `actool`-compiled legacy asset catalog, and
+the supplied app through `NSWorkspace` at 64/128/256/512 pixels. Previews are
+saved in `build/icon-tests/`.
+The side-highlight assertion runs on macOS 27, where the issue was reproduced;
+other OS versions still check the PNGs and export system-rendered previews.
+Inspect these previews when changing the icon or upgrading the build tools.
